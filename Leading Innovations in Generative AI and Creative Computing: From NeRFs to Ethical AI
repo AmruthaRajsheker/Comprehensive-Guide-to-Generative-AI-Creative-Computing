@@ -1,0 +1,357 @@
+
+
+## Hands-On Exercises
+
+### 1. **Kubernetes: Deploying a Scalable AI Model**
+
+**Objective:** Deploy a TensorFlow-based AI model on a Kubernetes cluster, ensuring it can scale based on incoming requests.
+
+**Steps:**
+1. **Prepare Docker Image:**
+   - Containerize the TensorFlow model with a REST API using Docker.
+   ```bash
+   docker build -t ai-model:latest .
+   ```
+
+2. **Deploy on Kubernetes:**
+   - Create a Kubernetes deployment and service for the AI model.
+   ```yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: ai-model-deployment
+   spec:
+     replicas: 3
+     selector:
+       matchLabels:
+         app: ai-model
+     template:
+       metadata:
+         labels:
+           app: ai-model
+       spec:
+         containers:
+         - name: ai-model
+           image: ai-model:latest
+           ports:
+           - containerPort: 80
+   ---
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: ai-model-service
+   spec:
+     type: LoadBalancer
+     selector:
+       app: ai-model
+     ports:
+       - protocol: TCP
+         port: 80
+         targetPort: 80
+   ```
+
+3. **Scale the Deployment:**
+   - Manually scale the deployment to handle more traffic.
+   ```bash
+   kubectl scale deployment ai-model-deployment --replicas=5
+   ```
+
+4. **Monitor and Manage:**
+   - Verify that the service is handling requests and scaling correctly.
+
+---
+
+### 2. **Prometheus: Monitoring an AI Model**
+
+**Objective:** Set up Prometheus to monitor the AI model deployed on Kubernetes, tracking key performance metrics.
+
+**Steps:**
+1. **Deploy Prometheus:**
+   - Deploy Prometheus on the Kubernetes cluster.
+   ```bash
+   kubectl create namespace monitoring
+   kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
+   ```
+
+2. **Configure Prometheus:**
+   - Create a `ServiceMonitor` for the AI model service.
+   ```yaml
+   apiVersion: monitoring.coreos.com/v1
+   kind: ServiceMonitor
+   metadata:
+     name: ai-model-monitor
+   spec:
+     selector:
+       matchLabels:
+         app: ai-model
+     endpoints:
+     - port: 80
+   ```
+
+3. **Visualize Metrics:**
+   - Access Prometheus and visualize metrics such as request count, response time, etc.
+   ```bash
+   kubectl port-forward svc/prometheus-k8s 9090:9090 -n monitoring
+   ```
+
+4. **Set Alerts:**
+   - Set up alert rules in Prometheus to notify you of any anomalies, such as high latency.
+
+---
+
+### 3. **Argo: Managing AI Model Pipelines**
+
+**Objective:** Use Argo Workflows to automate and manage an end-to-end AI model training pipeline.
+
+**Steps:**
+1. **Install Argo Workflows:**
+   - Install Argo on the Kubernetes cluster.
+   ```bash
+   kubectl create namespace argo
+   kubectl apply -n argo -f https://raw.githubusercontent.com/argoproj/argo-workflows/stable/manifests/install.yaml
+   ```
+
+2. **Define a Workflow:**
+   - Create a workflow for training and deploying the AI model.
+   ```yaml
+   apiVersion: argoproj.io/v1alpha1
+   kind: Workflow
+   metadata:
+     generateName: ai-model-pipeline-
+   spec:
+     entrypoint: train-deploy
+     templates:
+     - name: train-deploy
+       steps:
+       - - name: train-model
+           template: train
+       - - name: deploy-model
+           template: deploy
+
+     - name: train
+       container:
+         image: tensorflow/tensorflow:latest
+         command: ["python", "train.py"]
+
+     - name: deploy
+       container:
+         image: ai-model:latest
+         command: ["kubectl", "apply", "-f", "deployment.yaml"]
+   ```
+
+3. **Run the Workflow:**
+   - Trigger the workflow to see the entire pipeline execute.
+   ```bash
+   argo submit ai-model-pipeline.yaml --watch
+   ```
+
+---
+
+### 4. **Velero: Backup and Restore AI-Related Data**
+
+**Objective:** Use Velero to back up and restore the data and resources related to AI models.
+
+**Steps:**
+1. **Install Velero:**
+   - Install Velero on your Kubernetes cluster.
+   ```bash
+   velero install --provider aws --bucket my-bucket --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=http://minio:9000 --use-volume-snapshots=false
+   ```
+
+2. **Perform a Backup:**
+   - Backup the namespace containing your AI model and data.
+   ```bash
+   velero backup create ai-model-backup --include-namespaces=ai-model-namespace
+   ```
+
+3. **Restore from Backup:**
+   - Restore the backup to recover the AI model and associated resources.
+   ```bash
+   velero restore create --from-backup ai-model-backup
+   ```
+
+---
+
+### 5. **Tekton: CI/CD for AI Model Development**
+
+**Objective:** Create a CI/CD pipeline using Tekton to automate the testing and deployment of AI models.
+
+**Steps:**
+1. **Install Tekton Pipelines:**
+   - Install Tekton on the Kubernetes cluster.
+   ```bash
+   kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+   ```
+
+2. **Create a Pipeline:**
+   - Define a Tekton pipeline to test and deploy the AI model.
+   ```yaml
+   apiVersion: tekton.dev/v1beta1
+   kind: Pipeline
+   metadata:
+     name: ai-model-pipeline
+   spec:
+     tasks:
+     - name: test
+       taskRef:
+         name: test-task
+     - name: deploy
+       taskRef:
+         name: deploy-task
+   ```
+
+3. **Run the Pipeline:**
+   - Trigger the pipeline to run tests and deploy the AI model.
+   ```bash
+   tkn pipeline start ai-model-pipeline
+   ```
+
+---
+
+### 6. **TensorFlow: Building and Training a Model**
+
+**Objective:** Build and train a neural network model using TensorFlow.
+
+**Steps:**
+1. **Define the Model:**
+   - Create a simple neural network using TensorFlow.
+   ```python
+   import tensorflow as tf
+
+   model = tf.keras.Sequential([
+       tf.keras.layers.Dense(128, activation='relu', input_shape=(784,)),
+       tf.keras.layers.Dense(10, activation='softmax')
+   ])
+   ```
+
+2. **Compile the Model:**
+   - Compile the model with an optimizer and loss function.
+   ```python
+   model.compile(optimizer='adam',
+                 loss='sparse_categorical_crossentropy',
+                 metrics=['accuracy'])
+   ```
+
+3. **Train the Model:**
+   - Train the model on your dataset.
+   ```python
+   model.fit(train_images, train_labels, epochs=5)
+   ```
+
+4. **Evaluate the Model:**
+   - Evaluate the model on the test dataset.
+   ```python
+   test_loss, test_acc = model.evaluate(test_images, test_labels)
+   print('Test accuracy:', test_acc)
+   ```
+
+---
+
+### 7. **PyTorch: Implementing a Custom Neural Network**
+
+**Objective:** Implement a custom neural network using PyTorch.
+
+**Steps:**
+1. **Define the Network:**
+   - Create a neural network class in PyTorch.
+   ```python
+   import torch
+   import torch.nn as nn
+   import torch.optim as optim
+
+   class Net(nn.Module):
+       def __init__(self):
+           super(Net, self).__init__()
+           self.fc1 = nn.Linear(784, 128)
+           self.fc2 = nn.Linear(128, 10)
+
+       def forward(self, x):
+           x = torch.relu(self.fc1(x))
+           x = torch.softmax(self.fc2(x), dim=1)
+           return x
+   ```
+
+2. **Train the Model:**
+   - Train the model using a loss function and optimizer.
+   ```python
+   model = Net()
+   criterion = nn.CrossEntropyLoss()
+   optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+   for epoch in range(10):
+       for data in trainloader:
+           inputs, labels = data
+           optimizer.zero_grad()
+           outputs = model(inputs)
+           loss = criterion(outputs, labels)
+           loss.backward()
+           optimizer.step()
+   ```
+
+3. **Evaluate the Model:**
+   - Evaluate the model's performance on the test dataset.
+   ```python
+   correct = 0
+   total = 0
+   with torch.no_grad():
+       for data in testloader:
+           inputs, labels = data
+           outputs = model(inputs)
+           _, predicted = torch.max(outputs.data, 1)
+           total += labels.size(0)
+           correct += (predicted == labels).sum().item()
+
+   print('Accuracy: %d %%' % (100 * correct / total))
+   ```
+
+---
+
+### 8. **Hugging Face Transformers: Fine-Tuning a Pre-Trained NLP Model**
+
+**Objective:** Fine-tune a
+
+ pre-trained transformer model for text classification.
+
+**Steps:**
+1. **Load the Pre-Trained Model:**
+   - Load a pre-trained model from Hugging Face.
+   ```python
+   from transformers import BertTokenizer, BertForSequenceClassification
+   from transformers import Trainer, TrainingArguments
+
+   model_name = "bert-base-uncased"
+   tokenizer = BertTokenizer.from_pretrained(model_name)
+   model = BertForSequenceClassification.from_pretrained(model_name)
+   ```
+
+2. **Prepare the Dataset:**
+   - Tokenize the dataset using the model's tokenizer.
+   ```python
+   def tokenize_data(example):
+       return tokenizer(example['text'], padding='max_length', truncation=True)
+
+   train_dataset = train_dataset.map(tokenize_data)
+   ```
+
+3. **Train the Model:**
+   - Fine-tune the model using the `Trainer` API.
+   ```python
+   training_args = TrainingArguments(
+       output_dir='./results', num_train_epochs=3, per_device_train_batch_size=16)
+
+   trainer = Trainer(
+       model=model,
+       args=training_args,
+       train_dataset=train_dataset,
+       eval_dataset=eval_dataset
+   )
+
+   trainer.train()
+   ```
+
+4. **Evaluate the Model:**
+   - Evaluate the model on a test dataset.
+   ```python
+   trainer.evaluate()
+   ```
+
