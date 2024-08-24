@@ -1,4 +1,4 @@
-# Comprehensive Guide to Generative AI & Creative Computing
+# Leading Innovations in Generative AI and Creative Computing: From NeRFs to Ethical AI
 
 ## Introduction
 
